@@ -2,7 +2,6 @@
 
 /**
  * Генерирует случайный HEX-цвет
- * @returns {string} HEX-цвет
  */
 export function generateRandomColor() {
   const letters = "0123456789ABCDEF";
@@ -15,8 +14,6 @@ export function generateRandomColor() {
 
 /**
  * Преобразует HEX в RGB
- * @param {string} hex HEX-цвет
- * @returns {Object|null} Объект с r, g, b или null при ошибке
  */
 export function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -31,10 +28,6 @@ export function hexToRgb(hex) {
 
 /**
  * Преобразует RGB в HEX
- * @param {number} r Красный (0-255)
- * @param {number} g Зеленый (0-255)
- * @param {number} b Синий (0-255)
- * @returns {string} HEX-цвет
  */
 export function rgbToHex(r, g, b) {
   return (
@@ -50,46 +43,12 @@ export function rgbToHex(r, g, b) {
 }
 
 /**
- * Вычисляет яркость цвета (0-1)
- * @param {string} hex HEX-цвет
- * @returns {number} Яркость от 0 до 1
+ * Преобразует HEX в HSL
  */
-export function getColorBrightness(hex) {
+export function hexToHsl(hex) {
   const rgb = hexToRgb(hex);
-  if (!rgb) return 0.5;
-
-  // Формула восприятия яркости
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-}
-
-/**
- * Генерирует гармоничную палитру на основе базового цвета
- * @param {string} baseColor Базовый цвет
- * @param {number} count Количество цветов
- * @returns {string[]} Массив цветов
- */
-export function generateHarmoniousPalette(baseColor, count = 5) {
-  const rgb = hexToRgb(baseColor);
-  if (!rgb) return Array(count).fill(baseColor);
-
-  const palette = [baseColor];
-
-  // Генерация дополнительных цветов на основе HSL
-  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-
-  for (let i = 1; i < count; i++) {
-    // Создаем вариации с разными значениями насыщенности и яркости
-    const newHsl = {
-      h: (hsl.h + i * 30) % 360,
-      s: Math.min(100, Math.max(20, hsl.s + (i % 2 === 0 ? 10 : -10))),
-      l: Math.min(80, Math.max(20, hsl.l + (i % 3 === 0 ? 5 : -5))),
-    };
-
-    const newRgb = hslToRgb(newHsl.h, newHsl.s, newHsl.l);
-    palette.push(rgbToHex(newRgb.r, newRgb.g, newRgb.b));
-  }
-
-  return palette;
+  if (!rgb) return { h: 0, s: 0, l: 0 };
+  return rgbToHsl(rgb.r, rgb.g, rgb.b);
 }
 
 /**
@@ -107,7 +66,7 @@ function rgbToHsl(r, g, b) {
     l = (max + min) / 2;
 
   if (max === min) {
-    h = s = 0; // achromatic
+    h = s = 0;
   } else {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -172,10 +131,67 @@ function hslToRgb(h, s, l) {
 }
 
 /**
+ * Генерирует гармоничную палитру разных типов
+ */
+export function generatePalette(baseColor, type = "analogous", count = 5) {
+  const hsl = hexToHsl(baseColor);
+  const colors = [baseColor];
+
+  for (let i = 1; i < count; i++) {
+    let newHsl = { ...hsl };
+
+    switch (type) {
+      case "analogous":
+        // Аналогичные цвета (±30 градусов)
+        newHsl.h = (hsl.h + i * 30) % 360;
+        break;
+
+      case "monochromatic":
+        // Монохромные (разная насыщенность/яркость)
+        newHsl.s = Math.max(20, Math.min(80, hsl.s + (i % 2 === 0 ? 10 : -10)));
+        newHsl.l = Math.max(30, Math.min(70, hsl.l + (i % 3 === 0 ? 5 : -5)));
+        break;
+
+      case "triadic":
+        // Триадные (120 градусов разницы)
+        newHsl.h = (hsl.h + i * 120) % 360;
+        break;
+
+      case "complementary":
+        // Комплементарные (180 градусов)
+        newHsl.h = (hsl.h + 180) % 360;
+        break;
+
+      case "tetradic":
+        // Тетрадные (90 градусов)
+        newHsl.h = (hsl.h + i * 90) % 360;
+        break;
+
+      default:
+        // Аналогичные по умолчанию
+        newHsl.h = (hsl.h + i * 30) % 360;
+    }
+
+    const newRgb = hslToRgb(newHsl.h, newHsl.s, newHsl.l);
+    colors.push(rgbToHex(newRgb.r, newRgb.g, newRgb.b));
+  }
+
+  return colors;
+}
+
+/**
+ * Вычисляет яркость цвета (0-1)
+ */
+export function getColorBrightness(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0.5;
+
+  // Формула восприятия яркости
+  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+}
+
+/**
  * Настраивает яркость цвета
- * @param {string} hex HEX-цвет
- * @param {number} factor Фактор яркости (-1 до 1)
- * @returns {string} Новый HEX-цвет
  */
 export function adjustColorBrightness(hex, factor) {
   const rgb = hexToRgb(hex);
@@ -190,4 +206,34 @@ export function adjustColorBrightness(hex, factor) {
   };
 
   return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
+}
+
+/**
+ * Смешивает два цвета
+ */
+export function blendColors(color1, color2, weight = 0.5) {
+  const rgb1 = hexToRgb(color1);
+  const rgb2 = hexToRgb(color2);
+
+  if (!rgb1 || !rgb2) return color1;
+
+  const w = Math.min(1, Math.max(0, weight));
+
+  const r = Math.round(rgb1.r * (1 - w) + rgb2.r * w);
+  const g = Math.round(rgb1.g * (1 - w) + rgb2.g * w);
+  const b = Math.round(rgb1.b * (1 - w) + rgb2.b * w);
+
+  return rgbToHex(r, g, b);
+}
+
+/**
+ * Создает градиент между двумя цветами
+ */
+export function createGradient(color1, color2, steps = 5) {
+  const gradient = [];
+  for (let i = 0; i < steps; i++) {
+    const weight = i / (steps - 1);
+    gradient.push(blendColors(color1, color2, weight));
+  }
+  return gradient;
 }
